@@ -101,7 +101,14 @@ void addToFrame(Frame *fp, const char *line, int len)
         }
         fp->data = tmp;
     }
-    for(int i = 0; i < )
+    int rounded = fp->i + SCR_WIDTH;
+    
+    strcpy(fp->data + fp->i, line);
+    fp->data[rounded] = 0;
+    fp->data[rounded-1] = '\n';
+    
+    memset(fp->data + fp->i + len-1, ' ', rounded - fp->i - len);
+    fp->i = rounded;
 }
 
 bool isNumeric(const char *str)
