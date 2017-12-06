@@ -16,9 +16,11 @@
 #include <ctype.h>
 #include <stdbool.h>
 #include <malloc/malloc.h>
+#include <assert.h>
 
 #define QueueLength 10
 #define max(a, b) (a>b?a:b)
+#define SCR_WIDTH 80
 
 typedef struct{
     int capacity;
@@ -80,16 +82,17 @@ void loadFrames(const char *path, Frame **frameList, int *len)
 
 void addToFrame(Frame *fp, const char *line, int len)
 {
+    assert(len <= SCR_WIDTH);
     if(fp->data == NULL)
     {
         //default buffer size
-        fp->capacity = 16;
+        fp->capacity = 80;
         fp->i = 0;
         fp->data = malloc(fp->capacity);
     }
-    if(fp->i + len >= fp->capacity)
+    if(fp->i + SCR_WIDTH >= fp->capacity)
     {
-        fp->capacity = max(fp->capacity << 1, (int)(fp->i + read));
+        fp->capacity = max(fp->capacity << 1, fp->i + SCR_WIDTH);
         char *tmp = realloc(fp->data, fp->capacity);
         if(tmp == NULL)
         {
@@ -98,8 +101,7 @@ void addToFrame(Frame *fp, const char *line, int len)
         }
         fp->data = tmp;
     }
-    strcpy(fp->data + fp->i, line);
-    fp->i += len;
+    for(int i = 0; i < )
 }
 
 bool isNumeric(const char *str)
