@@ -12,6 +12,7 @@
 #include <unistd.h>
 #include <signal.h>
 #include <sys/socket.h>
+#include <arpa/inet.h>
 #include <netinet/in.h>
 #include <ctype.h>
 #include <stdbool.h>
@@ -33,7 +34,7 @@ typedef struct{
 void processClient(int, Frame*, int);
 bool isNumeric(const char *str);
 void addToFrame(Frame *fp, const char *line, int len);
-
+void printSockAddr(struct sockaddr_in *sa);
 
 void loadFrames(const char *path, Frame **frameList, int *len)
 {
@@ -82,15 +83,14 @@ void loadFrames(const char *path, Frame **frameList, int *len)
 
 void addToFrame(Frame *fp, const char *line, int len)
 {
-    assert(len <= SCR_WIDTH);
+    assert(len < SCR_WIDTH);
     if(fp->data == NULL)
     {
         //default buffer size
-        fp->capacity = 80;
+        fp->capacity = SCR_WIDTH+1;
         fp->i = 0;
         fp->data = malloc(fp->capacity);
-    }
-    if(fp->i + SCR_WIDTH >= fp->capacity)
+    }else if(fp->i + SCR_WIDTH >= fp->capacity)
     {
         fp->capacity = max(fp->capacity << 1, fp->i + SCR_WIDTH);
         char *tmp = realloc(fp->data, fp->capacity);
@@ -103,7 +103,10 @@ void addToFrame(Frame *fp, const char *line, int len)
     }
     int rounded = fp->i + SCR_WIDTH;
     
+    //append the data to frame buffer
     strcpy(fp->data + fp->i, line);
+    
+    //pad the buffer with space chars to
     fp->data[rounded] = 0;
     fp->data[rounded-1] = '\n';
     
@@ -189,10 +192,19 @@ int main(int argc, const char * argv[])
             perror( "accept");
             exit(-1);
         }
+        printSockAddr(&clientIPAddress);
         processClient(slaveSocket, frames, len);
         close(slaveSocket);
     }
     return 0;
+}
+
+void printSockAddr(struct sockaddr_in *sa)
+{
+    char buffer[20];
+    
+    inet_ntop(AF_INET, &sa->sin_addr, buffer, sizeof(buffer));
+    printf("%s: %d\n", buffer, sa->sin_port);
 }
 
 #define CLEARSCRN "\x1B[2J"
