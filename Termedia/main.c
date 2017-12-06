@@ -13,14 +13,118 @@
 #include <signal.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <ctype.h>
+#include <stdbool.h>
+#include <malloc/malloc.h>
 
 #define QueueLength 10
-void processClient(int);
+#define max(a, b) (a>b?a:b)
 
+typedef struct{
+    int capacity;
+    int i;
+    char *data;
+    int duration;
+} Frame;
+
+
+void processClient(int, Frame*, int);
+bool isNumeric(const char *str);
+void addToFrame(Frame *fp, const char *line, int len);
+
+
+void loadFrames(const char *path, Frame **frameList, int *len)
+{
+    FILE *fp = fopen(path, "r");
+    
+    int i = -1;
+    int capacity = 4;
+    Frame *frames = malloc(capacity * sizeof(Frame));
+    memset(frames, 0, capacity * sizeof(Frame));
+    
+    while(!feof(fp))
+    {
+        char *line = NULL;
+        size_t linecap = 0;
+        size_t read = getline(&line, &linecap, fp);
+        if(isNumeric(line))
+        {
+            i++;
+            if(i >= capacity)
+            {
+                //double the buffer size
+                capacity <<= 1;
+                Frame *tmp = realloc(frames, capacity*sizeof(Frame));
+                if(tmp == NULL)
+                {
+                    perror("malloc");
+                    exit(0);
+                }
+                //initialize the expanded region
+//                memset(tmp+i, 0, (capacity-i)*sizeof(Frame));
+                frames = tmp;
+            }
+            frames[i].duration = atoi(line);
+            frames[i].data = NULL;
+            frames[i].i = 0;
+        }else
+        {
+            addToFrame(frames+i, line, (int)read);
+        }
+        free(line);
+    }
+    fclose(fp);
+    *frameList = frames;
+    *len = i+1;
+}
+
+void addToFrame(Frame *fp, const char *line, int len)
+{
+    if(fp->data == NULL)
+    {
+        //default buffer size
+        fp->capacity = 16;
+        fp->i = 0;
+        fp->data = malloc(fp->capacity);
+    }
+    if(fp->i + len >= fp->capacity)
+    {
+        fp->capacity = max(fp->capacity << 1, (int)(fp->i + read));
+        char *tmp = realloc(fp->data, fp->capacity);
+        if(tmp == NULL)
+        {
+            perror("malloc");
+            exit(0);
+        }
+        fp->data = tmp;
+    }
+    strcpy(fp->data + fp->i, line);
+    fp->i += len;
+}
+
+bool isNumeric(const char *str)
+{
+    if(*str == 0 || *str == '\n')return false;
+    while(*str && *str != '\n')
+    {
+        if(!isdigit(*str++))return false;
+    }
+    return true;
+}
+
+void freeFrames(Frame *frames)
+{
+    free(frames);
+}
 
 int main(int argc, const char * argv[])
 {
     signal(SIGPIPE, SIG_IGN);
+    
+    Frame *frames = NULL;
+    int len = 0;
+    loadFrames(argv[1], &frames, &len);
+    
     int port = 2333;
     
     // Set the IP address and port for this server
@@ -76,7 +180,7 @@ int main(int argc, const char * argv[])
             perror( "accept");
             exit(-1);
         }
-        processClient(slaveSocket);
+        processClient(slaveSocket, frames, len);
         close(slaveSocket);
     }
     return 0;
@@ -85,16 +189,17 @@ int main(int argc, const char * argv[])
 #define CLEARSCRN "\x1B[2J"
 #define JMPHOME "\x1B[H"
 
-void processClient(int fd)
+void processClient(int fd, Frame *frames, int len)
 {
     write(fd, CLEARSCRN, sizeof(CLEARSCRN)-1);
-    FILE *fp = fdopen(dup(fd), "a+");
     
-    for(int i = 0; i < 100; i ++)
+    for(int i = 0; i < len; i ++)
     {
-        if(fprintf(fp, "%s%d\n", JMPHOME, i) < 0)return;
-        fflush(fp);
-        usleep(1000 * 200);
+        if(write(fd, JMPHOME, sizeof(JMPHOME)-1) <= 0)return;
+        if(write(fd, frames[i].data, frames[i].i) <= 0)return;
+        for(int j = frames[i].duration; j > 0; j--)
+        {
+            usleep(66666);
+        }
     }
-    fclose(fp);
 }
