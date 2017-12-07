@@ -18,6 +18,7 @@
 #include <stdbool.h>
 #include <malloc/malloc.h>
 #include <assert.h>
+#include <pthread.h>
 
 #define QueueLength 10
 #define max(a, b) (a>b?a:b)
@@ -35,6 +36,7 @@ void processClient(int, Frame*, int);
 bool isNumeric(const char *str);
 void addToFrame(Frame *fp, const char *line, int len);
 void printSockAddr(struct sockaddr_in *sa);
+
 
 void loadFrames(const char *path, Frame **frameList, int *len)
 {
@@ -63,9 +65,17 @@ void loadFrames(const char *path, Frame **frameList, int *len)
                     perror("malloc");
                     exit(0);
                 }
-                //initialize the expanded region
-//                memset(tmp+i, 0, (capacity-i)*sizeof(Frame));
                 frames = tmp;
+            }
+            if(i >= 1)
+            {
+                char *tmp = realloc(frames[i-1].data, frames[i-1].i);
+                if(tmp == NULL)
+                {
+                    perror("malloc");
+                    exit(0);
+                }
+                frames[i-1].data = tmp;
             }
             frames[i].duration = atoi(line);
             frames[i].data = NULL;
@@ -132,6 +142,7 @@ void freeFrames(Frame *frames)
 int main(int argc, const char * argv[])
 {
     signal(SIGPIPE, SIG_IGN);
+    signal(SIGCHLD, SIG_IGN);
     
     Frame *frames = NULL;
     int len = 0;
@@ -193,7 +204,11 @@ int main(int argc, const char * argv[])
             exit(-1);
         }
         printSockAddr(&clientIPAddress);
-        processClient(slaveSocket, frames, len);
+        if(fork() == 0)
+        {
+            processClient(slaveSocket, frames, len);
+            exit(0);
+        }
         close(slaveSocket);
     }
     return 0;
