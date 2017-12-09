@@ -91,18 +91,29 @@ void loadFrames(const char *path, Frame **frameList, int *len)
     *len = i+1;
 }
 
+int utf8len(const char *s)
+{
+    int len = 0;
+    for (; *s; ++s) if ((*s & 0xC0) != 0x80) len++;
+    return len;
+}
+
 void addToFrame(Frame *fp, const char *line, int len)
 {
-    assert(len < SCR_WIDTH);
+    int charCount = (int)utf8len(line);
+    int pad = SCR_WIDTH - charCount - 1;
+    int bytes = len + pad;
+    
+    assert(charCount < SCR_WIDTH);
     if(fp->data == NULL)
     {
         //default buffer size
-        fp->capacity = SCR_WIDTH+1;
+        fp->capacity = bytes+1;
         fp->i = 0;
         fp->data = malloc(fp->capacity);
-    }else if(fp->i + SCR_WIDTH >= fp->capacity)
+    }else if(fp->i + bytes >= fp->capacity)
     {
-        fp->capacity = max(fp->capacity << 1, fp->i + SCR_WIDTH);
+        fp->capacity = fp->i + bytes+1;
         char *tmp = realloc(fp->data, fp->capacity);
         if(tmp == NULL)
         {
@@ -111,7 +122,7 @@ void addToFrame(Frame *fp, const char *line, int len)
         }
         fp->data = tmp;
     }
-    int rounded = fp->i + SCR_WIDTH;
+    int rounded = fp->i + bytes;
     
     //append the data to frame buffer
     strcpy(fp->data + fp->i, line);
