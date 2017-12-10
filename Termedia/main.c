@@ -16,7 +16,6 @@
 #include <netinet/in.h>
 #include <ctype.h>
 #include <stdbool.h>
-#include <malloc/malloc.h>
 #include <assert.h>
 #include <pthread.h>
 
