@@ -243,9 +243,6 @@ void processClient(int fd, Frame *frames, int len)
     {
         if(write(fd, JMPHOME, sizeof(JMPHOME)-1) <= 0)return;
         if(write(fd, frames[i].data, frames[i].i) <= 0)return;
-        for(int j = frames[i].duration; j > 0; j--)
-        {
-            usleep(66666);
-        }
+        usleep(frames[i].duration * 66666);
     }
 }
