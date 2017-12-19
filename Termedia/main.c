@@ -45,12 +45,14 @@ void loadFrames(const char *path, Frame **frameList, int *len)
     int capacity = 4;
     Frame *frames = malloc(capacity * sizeof(Frame));
     memset(frames, 0, capacity * sizeof(Frame));
-    
+    int lineNumber = 0;
     while(!feof(fp))
     {
         char *line = NULL;
         size_t linecap = 0;
         size_t read = getline(&line, &linecap, fp);
+        lineNumber++;
+        printf("Processing Line: %d\n", lineNumber);
         if(isNumeric(line))
         {
             i++;

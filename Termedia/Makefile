@@ -1,4 +1,4 @@
 all: main
 
 main: main.c
-	gcc main.c -o main
+	gcc -g -Wall -Werror main.c -o main
