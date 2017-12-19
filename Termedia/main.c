@@ -52,7 +52,7 @@ void loadFrames(const char *path, Frame **frameList, int *len)
         size_t linecap = 0;
         size_t read = getline(&line, &linecap, fp);
         lineNumber++;
-        printf("Processing Line: %d\n", lineNumber);
+        printf("Processing Line: %d\r", lineNumber);
         if(isNumeric(line))
         {
             i++;
@@ -90,6 +90,7 @@ void loadFrames(const char *path, Frame **frameList, int *len)
     fclose(fp);
     *frameList = frames;
     *len = i+1;
+    printf("All frames are loaded!\n");
 }
 
 int utf8len(const char *s)
